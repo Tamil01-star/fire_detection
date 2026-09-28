@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Enabled IoT Fire Detection Suite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --card-bg: #121929;
+            --card-border: #1e293d;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-safe: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --accent-blue: #3b82f6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        navbar {
+            background: rgba(18, 25, 41, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand { display: flex; align-items: center; gap: 12px; }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #ef4444, #f59e0b);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+        }
+
+        h1 { font-size: 1.4rem; font-weight: 700; }
+        .subtitle { font-size: 0.8rem; color: var(--text-muted); }
+
+        .nav-actions { display: flex; align-items: center; gap: 16px; }
+
+        .audio-toggle {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 8px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .audio-toggle:hover { background: rgba(255,255,255,0.1); }
+
+        .connection-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--accent-safe);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: currentColor;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+
+        .main-container {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 2rem;
+        }
+
+        .primary-column { display: flex; flex-direction: column; gap: 2rem; }
+
+        .scorecard-banner {
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 20px;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 2rem;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .scorecard-banner.danger-alert {
+            border-color: var(--accent-danger);
+            box-shadow: 0 0 40px rgba(239, 68, 68, 0.35);
+        }
+
+        .gauge-wrapper {
+            text-align: center;
+            background: rgba(9, 13, 22, 0.6);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+        }
+
+        .gauge-val { font-size: 3.5rem; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+        .gauge-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+        .status-details { display: flex; flex-direction: column; gap: 12px; }
+
+        .status-pill {
+            align-self: flex-start;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .pill-safe { background: rgba(16, 185, 129, 0.15); color: var(--accent-safe); }
+        .pill-danger { background: rgba(239, 68, 68, 0.2); color: var(--accent-danger); }
+
+        .sensor-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; }
+
+        .stat-card {
+            background: rgba(9, 13, 22, 0.4);
+            border: 1px solid var(--card-border);
+            padding: 1rem;
+            border-radius: 12px;
+        }
+
+        .stat-title { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; }
+        .stat-value { font-size: 1.2rem; font-weight: 700; }
+
+        .chart-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+        }
+
+        .table-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--card-border); }
+        th { color: var(--text-muted); font-weight: 600; }
+
+        .secondary-column { display: flex; flex-direction: column; gap: 2rem; }
+
+        .control-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+        }
+
+        .btn-stack { display: flex; flex-direction: column; gap: 12px; }
+
+        .btn {
+            background: #1e293d;
+            color: var(--text-main);
+            border: 1px solid var(--card-border);
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+        }
+
+        .btn:hover { background: #2d3d59; }
+
+        .btn-danger-outline {
+            border-color: rgba(239, 68, 68, 0.4);
+            color: var(--accent-danger);
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .btn-danger-outline:hover { background: rgba(239, 68, 68, 0.15); }
+    </style>
+</head>
+<body>
+
+    <navbar>
+        <div class="brand">
+            <div class="logo-icon">🔥</div>
+            <div>
+                <h1>IoT Fire Detection & Risk Application</h1>
+                <div class="subtitle">Public Cloud Live Dashboard</div>
+            </div>
+        </div>
+        <div class="nav-actions">
+            <button class="audio-toggle" id="audioBtn" onclick="toggleAudio()">
+                <span id="audioIcon">🔇</span> Mute Sound
+            </button>
+            <div class="connection-badge" id="connBadge">
+                <div class="dot"></div> Live Public Online
+            </div>
+        </div>
+    </navbar>
+
+    <div class="main-container">
+        <div class="primary-column">
+            <div class="scorecard-banner" id="scoreBanner">
+                <div class="gauge-wrapper">
+                    <div class="gauge-val" id="scoreVal" style="color: var(--accent-safe)">0%</div>
+                    <div class="gauge-label">Fire Risk Score</div>
+                </div>
+                <div class="status-details">
+                    <span class="status-pill pill-safe" id="statusPill">System Normal</span>
+                    <h2 id="bannerMessage">Monitored Zone Safe</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">
+                        Real-time ESP32 Sensor Monitoring & Risk Telemetry Scoreboard.
+                    </p>
+
+                    <div class="sensor-stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-title">IR Flame Sensor</div>
+                            <div class="stat-value" id="flameVal">CLEAR (0)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">MQ-2 Smoke ADC</div>
+                            <div class="stat-value" id="smokeVal">120 ADC</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">Buzzer Relay</div>
+                            <div class="stat-value" id="buzzerVal">INACTIVE</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                    <h3>📈 Real-Time Smoke Telemetry Graph</h3>
+                    <span style="font-size:0.8rem; color:var(--text-muted)">Live Updating</span>
+                </div>
+                <canvas id="smokeChart" height="100"></canvas>
+            </div>
+
+            <div class="table-card">
+                <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                    <h3>🗄️ Telemetry Log Table</h3>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>IR Flame (GPIO 34)</th>
+                            <th>MQ-2 Smoke (GPIO 35)</th>
+                            <th>Fire Risk Score</th>
+                            <th>Action Taken</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dbLogBody">
+                        <tr>
+                            <td>Init</td>
+                            <td>Clear (0)</td>
+                            <td>120 ADC</td>
+                            <td><span style="color:var(--accent-safe)">0%</span></td>
+                            <td>Monitoring active...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="secondary-column">
+            <div class="control-panel">
+                <h3 style="margin-bottom:1rem;">🕹️ Interactive Controls</h3>
+                <div class="btn-stack">
+                    <button class="btn" onclick="simTrigger('flame')">
+                        <span>🔥 Simulate IR Flame</span>
+                        <span style="font-size:0.8rem;">GPIO 34</span>
+                    </button>
+                    <button class="btn" onclick="simTrigger('smoke')">
+                        <span>💨 Simulate High Smoke</span>
+                        <span style="font-size:0.8rem;">GPIO 35</span>
+                    </button>
+                    <button class="btn btn-danger-outline" onclick="simReset()">
+                        <span>🔄 Reset System</span>
+                        <span style="font-size:0.8rem;">Safe</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 🔴 CHANGE THIS TO YOUR RENDER API URL! 🔴
+        // ==========================================
+        const API_URL = "https://fire-detection-two.vercel.app/api/sensor"; 
+
+        let audioEnabled = false, audioCtx = null, alarmOsc = null;
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            const btn = document.getElementById('audioBtn');
+            const icon = document.getElementById('audioIcon');
+            if (audioEnabled) { btn.style.borderColor = 'var(--accent-safe)'; icon.innerText = '🔊'; }
+            else { btn.style.borderColor = 'var(--card-border)'; icon.innerText = '🔇'; stopAlarmSound(); }
+        }
+        function playAlarmSound() {
+            if (!audioEnabled) return;
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (alarmOsc) return;
+            alarmOsc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            alarmOsc.type = 'sawtooth';
+            alarmOsc.frequency.setValueAtTime(880, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            alarmOsc.connect(gain);
+            gain.connect(audioCtx.destination);
+            alarmOsc.start();
+        }
+        function stopAlarmSound() { if (alarmOsc) { alarmOsc.stop(); alarmOsc.disconnect(); alarmOsc = null; } }
+
+        const ctx = document.getElementById('smokeChart').getContext('2d');
+        const smokeChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'MQ-2 Smoke Level (ADC)',
+                    data: [],
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: '#1e293d' }, ticks: { color: '#94a3b8' } },
+                    y: { grid: { color: '#1e293d' }, ticks: { color: '#94a3b8' }, min: 0, max: 4095 }
+                },
+                plugins: { legend: { labels: { color: '#f8fafc' } } }
+            }
+        });
+
+        let flameDetected = false, smokeADC = 120;
+        let lastId = null; // Track if we got a new reading
+
+        function updateUI() {
+            let score = 0;
+            if (flameDetected) score += 70;
+            if (smokeADC > 1800) score += 30; // 1800 is gasThreshold from ESP32 code
+            score = Math.min(100, score);
+
+            document.getElementById('scoreVal').innerText = score + '%';
+            document.getElementById('flameVal').innerText = flameDetected ? '🔥 DETECTED (0)' : 'CLEAR (1)';
+            document.getElementById('flameVal').style.color = flameDetected ? 'var(--accent-danger)' : 'var(--text-main)';
+            document.getElementById('smokeVal').innerText = smokeADC + ' ADC';
+
+            const scoreBanner = document.getElementById('scoreBanner');
+            const statusPill = document.getElementById('statusPill');
+            const bannerMsg = document.getElementById('bannerMessage');
+            const buzzerVal = document.getElementById('buzzerVal');
+
+            if (score >= 70) {
+                scoreBanner.className = 'scorecard-banner danger-alert';
+                statusPill.className = 'status-pill pill-danger';
+                statusPill.innerText = '🔥 FIRE HAZARD DETECTED';
+                bannerMsg.innerText = 'EMERGENCY: Fire / High Smoke Detected!';
+                document.getElementById('scoreVal').style.color = 'var(--accent-danger)';
+                buzzerVal.innerText = '🔊 BEEPING!';
+                buzzerVal.style.color = 'var(--accent-danger)';
+                playAlarmSound();
+            } else {
+                scoreBanner.className = 'scorecard-banner';
+                statusPill.className = 'status-pill pill-safe';
+                statusPill.innerText = 'System Safe';
+                bannerMsg.innerText = 'Monitored Zone Safe';
+                document.getElementById('scoreVal').style.color = 'var(--accent-safe)';
+                buzzerVal.innerText = 'INACTIVE';
+                buzzerVal.style.color = 'var(--text-main)';
+                stopAlarmSound();
+            }
+
+            const timeLabel = new Date().toLocaleTimeString();
+            smokeChart.data.labels.push(timeLabel);
+            smokeChart.data.datasets[0].data.push(smokeADC);
+            if (smokeChart.data.labels.length > 15) {
+                smokeChart.data.labels.shift();
+                smokeChart.data.datasets[0].data.shift();
+            }
+            smokeChart.update();
+        }
+
+        function addLog(flame, smoke, action) {
+            const tbody = document.getElementById('dbLogBody');
+            const tr = document.createElement('tr');
+            const now = new Date().toLocaleTimeString();
+            const isDanger = flame || smoke > 1800;
+            tr.innerHTML = `
+                <td>${now}</td>
+                <td>${flame ? '🔥 Detected (0)' : 'Clear (1)'}</td>
+                <td>${smoke} ADC</td>
+                <td><span style="color:${isDanger ? 'var(--accent-danger)' : 'var(--accent-safe)'}">${isDanger ? '70%+' : '0%'}</span></td>
+                <td>${action}</td>
+            `;
+            tbody.insertBefore(tr, tbody.firstChild);
+        }
+
+        // Fetch data from our Node.js Middleman API
+        async function fetchSensorData() {
+            if (API_URL.includes("YOUR_API_NAME")) {
+                console.warn("API URL not set. Waiting for user to add Render URL.");
+                return;
+            }
+
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error("API returned " + response.status);
+                
+                const data = await response.json();
+                
+                // Only update if it's a new row from the database (assuming 'id' is unique)
+                if (data.id !== lastId) {
+                    // Flame sensor logic: 0 (LOW) means detected, 1 (HIGH) means safe
+                    flameDetected = (data.flame === 0);
+                    smokeADC = data.gas;
+                    
+                    updateUI();
+                    
+                    const isDanger = flameDetected || smokeADC > 1800;
+                    addLog(flameDetected, smokeADC, isDanger ? 'Buzzer Triggered' : 'Telemetry Received');
+                    
+                    lastId = data.id;
+                }
+
+                // Update connection status badge
+                const connBadge = document.getElementById('connBadge');
+                connBadge.innerHTML = '<div class="dot"></div> Live DB Connected';
+                connBadge.style.color = 'var(--accent-safe)';
+                connBadge.style.background = 'rgba(16, 185, 129, 0.1)';
+                connBadge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+                const connBadge = document.getElementById('connBadge');
+                connBadge.innerHTML = '⚠️ DB Disconnected';
+                connBadge.style.color = 'var(--accent-danger)';
+                connBadge.style.background = 'rgba(239, 68, 68, 0.1)';
+                connBadge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            }
+        }
+
+        // Fetch new data every 5 seconds (matches ESP32 delay)
+        setInterval(fetchSensorData, 5000);
+        
+        // Initial fetch
+        setTimeout(fetchSensorData, 1000);
+
+        // Keep simulation buttons working for testing
+        function simTrigger(type) {
+            if (type === 'flame') flameDetected = !flameDetected;
+            if (type === 'smoke') smokeADC = smokeADC > 1800 ? 120 : 2500;
+            updateUI();
+            addLog(flameDetected, smokeADC, flameDetected || smokeADC > 1800 ? 'Simulated Danger' : 'Cleared');
+        }
+
+        function simReset() {
+            flameDetected = false; smokeADC = 120; updateUI();
+            addLog(false, 120, 'Reset All (Sim)');
+        }
+    </script>
+</body>
+</html>
